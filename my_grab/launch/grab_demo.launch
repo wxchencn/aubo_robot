@@ -1,0 +1,6 @@
+<launch>
+
+  <node name="grab_demo" pkg="my_grab" type="grab_demo" respawn="false" output="screen">
+  </node>
+
+</launch>
