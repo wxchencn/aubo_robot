@@ -12,7 +12,7 @@
 #include <tf/LinearMath/Quaternion.h>
 
 typedef actionlib::SimpleActionClient<dh_hand_driver::ActuateHandAction> Client;
-
+// dh_hand_driver
 class DH_HandActionClient {
    private:
     // Called once when the goal completes
@@ -73,6 +73,9 @@ class DH_HandActionClient {
    private:
     Client client;
 };
+
+void GetPoseMsg() {
+}
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "grab_demo");
@@ -167,39 +170,6 @@ int main(int argc, char** argv) {
     // Move to the home point position
     move_group.setJointValueTarget(home_position);
     move_group.move();
-
-    visual_tools.prompt("Press 'next'2 in the RvizVisualToolsGui window to continue the demo");
-
-    // **************************************************************************************************    The second example, the joint 1 is rotated 90 degrees based on the home position.
-
-    moveit::core::RobotStatePtr current_state = move_group.getCurrentState();
-
-    // Get the joint value and model information of the current group
-    std::vector<double> joint_group_positions;
-    current_state->copyJointGroupPositions(joint_model_group, joint_group_positions);
-
-    // Modify the value of joint 1
-    joint_group_positions[0] = -1.57;  // radians
-    move_group.setJointValueTarget(joint_group_positions);
-
-    success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-    ROS_INFO_NAMED("tutorial", "Visualizing plan 2 (joint space goal) %s", success ? "success" : "FAILED");
-
-    // Visual display in RVIZ
-    visual_tools.deleteAllMarkers();
-    visual_tools.publishText(text_pose, "AUBO Joint Space Goal Example2", rvt::RED, rvt::XLARGE);
-    visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
-    visual_tools.trigger();
-
-    // Perform planning actions
-    move_group.execute(my_plan);
-
-    // Move to the home point position
-    joint_group_positions[0] = 0;  // radians
-    move_group.setJointValueTarget(joint_group_positions);
-    move_group.move();
-
-    visual_tools.prompt("Press 'next'3 in the RvizVisualToolsGui window to continue the demo");
 
     // **************************************************************************************************   第三实例：机器臂根据设置的路径约束从起始点运动到初始点
     // **************************************************************************************************   The third example: the robot arm moves from point A to point B according to the set path constraint.
@@ -330,172 +300,6 @@ int main(int argc, char** argv) {
     // Clear path constraint
     move_group.setJointValueTarget(home_position);
     move_group.move();
-
-    visual_tools.prompt("Press 'next'5  ADD a OBject in the RvizVisualToolsGui window to continue the demo");
-
-    // **************************************************************************************************   Fifth example: adding obstacles
-
-    // Define a collision object
-    moveit_msgs::CollisionObject collision_object;
-    collision_object.header.frame_id = move_group.getPlanningFrame();
-
-    // Set the ID of the object
-    collision_object.id = "box1";
-
-    // ********************************Defining a box (obstacle) added to the world
-    shape_msgs::SolidPrimitive primitive;
-    primitive.type = primitive.BOX;
-    primitive.dimensions.resize(3);
-    primitive.dimensions[0] = 0.4;
-    primitive.dimensions[1] = 0.05;
-    primitive.dimensions[2] = 0.4;
-
-    // 设置盒子(障碍物)的位置和姿态
-    // Set the box (obstacle) pose
-    geometry_msgs::Pose box_pose;
-    box_pose.orientation.w = 1.0;
-    box_pose.position.x = -0.3;
-    box_pose.position.y = 0.2;
-    box_pose.position.z = 0.54;
-
-    collision_object.primitives.push_back(primitive);
-    collision_object.primitive_poses.push_back(box_pose);
-    collision_object.operation = collision_object.ADD;
-
-    // *********************************Defining a box (desktop) added in the world
-    moveit_msgs::CollisionObject collision_object2;
-    collision_object2.header.frame_id = move_group.getPlanningFrame();
-
-    // Set the ID of the object
-    collision_object2.id = "box2";
-
-    // Set length, width and height
-    shape_msgs::SolidPrimitive primitive2;
-    primitive2.type = primitive.BOX;
-    primitive2.dimensions.resize(3);
-    primitive2.dimensions[0] = 1.7;
-    primitive2.dimensions[1] = 1.7;
-    primitive2.dimensions[2] = 0.05;
-
-    // Set the box (Desktop) pose
-    geometry_msgs::Pose box_pose2;
-    box_pose2.orientation.w = 1.0;
-    box_pose2.position.x = 0.0;
-    box_pose2.position.y = 0.0;
-    box_pose2.position.z = 0.0;
-
-    collision_object2.primitives.push_back(primitive2);
-    collision_object2.primitive_poses.push_back(box_pose2);
-    collision_object2.operation = collision_object2.ADD;
-
-    std::vector<moveit_msgs::CollisionObject> collision_objects;
-    collision_objects.push_back(collision_object);
-    collision_objects.push_back(collision_object2);
-
-    planning_scene_interface.addCollisionObjects(collision_objects);
-
-    // Show text in RViz of status
-    visual_tools.deleteAllMarkers();
-    visual_tools.publishText(text_pose, "AUBO Add object Example5", rvt::RED, rvt::XLARGE);
-    visual_tools.trigger();
-
-    visual_tools.prompt("Press 'next'6 in the RvizVisualToolsGui window to once the collision object appears in RViz");
-
-    // **************************************************************************************************   Sixth example: obstacle avoidance movement
-
-    // Add a track to avoid obstacle movement
-    q.setRPY(1.77, -0.59, -1.79);  // radian
-
-    move_group.setStartState(*move_group.getCurrentState());
-    geometry_msgs::Pose another_pose;
-    another_pose.orientation.x = q.x();
-    another_pose.orientation.y = q.y();
-    another_pose.orientation.z = q.z();
-    another_pose.orientation.w = q.w();
-    another_pose.position.x = -0.37;
-    another_pose.position.y = 0.6;
-    another_pose.position.z = 0.4;
-    move_group.setPoseTarget(another_pose);
-
-    success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
-    ROS_INFO_NAMED("tutorial", "Visualizing plan 5 (pose goal move around cuboid) %s", success ? "" : "FAILED");
-
-    // Visualize the plan in RViz
-    visual_tools.deleteAllMarkers();
-    visual_tools.publishText(text_pose, "AUBO Obstacle Goal Exalmple6", rvt::RED, rvt::XLARGE);
-    visual_tools.publishTrajectoryLine(my_plan.trajectory_, joint_model_group);
-    visual_tools.trigger();
-
-    // Perform planning actions
-    move_group.execute(my_plan);
-
-    // Move to the home point position
-    move_group.setJointValueTarget(home_position);
-    move_group.move();
-    visual_tools.prompt("next step 7 attach the collision object to the robot");
-
-    // **************************************************************************************************   Seventh example: Simulated collision
-
-    ROS_INFO_NAMED("tutorial", "Attach the object to the robot");
-    move_group.attachObject(collision_object.id);
-
-    visual_tools.publishText(text_pose, "AUBO Object attached to robot Example7", rvt::RED, rvt::XLARGE);
-    visual_tools.trigger();
-
-    visual_tools.prompt(
-        "Press 'next'8 in the RvizVisualToolsGui window to once the collision object attaches to the "
-        "robot");
-
-    // **************************************************************************************************   Eighth example: Simulated no collision
-
-    ROS_INFO_NAMED("tutorial", "Detach the object from the robot");
-    move_group.detachObject(collision_object.id);
-
-    visual_tools.publishText(text_pose, "AUBO Object dettached from robot Example8", rvt::RED, rvt::XLARGE);
-    visual_tools.trigger();
-
-    visual_tools.prompt(
-        "Press 'next'9 in the RvizVisualToolsGui window to once the collision object detaches to the "
-        "robot");
-
-    //**************************************************************************************************    Ninth example: removing obstacles
-
-    // Remove obstacles
-    ROS_INFO_NAMED("tutorial", "Remove the object from the world");
-    std::vector<std::string> object_ids;
-    object_ids.push_back(collision_object.id);
-    planning_scene_interface.removeCollisionObjects(object_ids);
-
-    visual_tools.deleteAllMarkers();
-    visual_tools.publishText(text_pose, "AUBO Object1 removed EXample9", rvt::RED, rvt::XLARGE);
-    visual_tools.trigger();
-
-    //**************************************************************************************************    Tenth example: random motion (screened, users need to be able to open it themselves. Tip: random motion is uncertain, users need to hold the emergency stop to pay attention to safety)
-
-    //   visual_tools.deleteAllMarkers();
-    //   visual_tools.publishText(text_pose, "AUBO Random Move Exalmple 10", rvt::RED, rvt::XLARGE);
-    //   visual_tools.trigger();
-
-    //   for(int i=0;i<30;i++)
-    //   {
-
-    //     move_group.setRandomTarget();
-
-    //     move_group.move();
-
-    //     ROS_INFO_NAMED("tutorial", "Random Moving %d:",i);
-
-    //   }
-    //   visual_tools.prompt("Press 'next'10 : Robot Random Moving");
-
-    // Remove the desktop
-    ROS_INFO_NAMED("tutorial", "Remove the desktop from the world");
-    object_ids.push_back(collision_object2.id);
-    planning_scene_interface.removeCollisionObjects(object_ids);
-    // Show text in RViz of status
-    visual_tools.deleteAllMarkers();
-    visual_tools.publishText(text_pose, " Finish ", rvt::RED, rvt::XLARGE);
-    visual_tools.trigger();
 
     // END_TUTORIAL
     ros::shutdown();
