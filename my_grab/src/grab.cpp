@@ -1,5 +1,7 @@
 
-
+#include <actionlib/client/simple_action_client.h>
+#include <dh_hand_driver/ActuateHandAction.h>
+#include <dh_hand_driver/hand_state.h>
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit_msgs/AttachedCollisionObject.h>
@@ -8,6 +10,69 @@
 #include <moveit_msgs/DisplayTrajectory.h>
 #include <moveit_visual_tools/moveit_visual_tools.h>
 #include <tf/LinearMath/Quaternion.h>
+
+typedef actionlib::SimpleActionClient<dh_hand_driver::ActuateHandAction> Client;
+
+class DH_HandActionClient {
+   private:
+    // Called once when the goal completes
+    void DoneCb(const actionlib::SimpleClientGoalState& state,
+                const dh_hand_driver::ActuateHandResultConstPtr& result) {
+        ROS_INFO("Finished in state [%s]", state.toString().c_str());
+        ROS_INFO("result  : %i", result->opration_done);
+    }
+
+    // when target active, call this once
+    void ActiveCb() {
+        ROS_INFO("Goal just went active");
+    }
+
+    // received feedback
+    void FeedbackCb(
+        const dh_hand_driver::ActuateHandFeedbackConstPtr& feedback) {
+        ROS_INFO("Got Feedback: %i", feedback->position_reached);
+    }
+
+   public:
+    DH_HandActionClient(const std::string client_name, bool flag = true) : client(client_name, flag) {
+    }
+
+    //client start
+    void Start(int32_t motorID, int32_t setpos, int32_t setforce) {
+        ROS_INFO("wait server");
+        client.waitForServer();
+        //set goal
+        dh_hand_driver::ActuateHandGoal goal;
+        // AG2E just has one motor (ID:1)
+        // AG3E has two motor (ID:1 and 2)
+        goal.MotorID = motorID;
+        goal.force = setforce;
+        goal.position = setpos;
+
+        ROS_INFO("Send goal %d %d %d", goal.MotorID, goal.force, goal.position);
+        //sen goal
+        client.sendGoal(goal,
+                        boost::bind(&DH_HandActionClient::DoneCb, this, _1, _2),
+                        boost::bind(&DH_HandActionClient::ActiveCb, this),
+                        boost::bind(&DH_HandActionClient::FeedbackCb, this, _1));
+        ROS_INFO("wait result");
+
+        client.waitForResult(ros::Duration(15.0));
+
+        //process the result
+        if (client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+            ROS_INFO("Send commond succeeded");
+        else {
+            ROS_WARN("Cancel Goal!");
+            client.cancelAllGoals();
+        }
+
+        printf("Current State: %s\n", client.getState().toString().c_str());
+    }
+
+   private:
+    Client client;
+};
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "grab_demo");
